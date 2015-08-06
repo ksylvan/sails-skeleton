@@ -79,8 +79,14 @@ Now, on Linux, you can use the following method of working with your sources:
     
     Then continue using commands in the container.
 
-Now, continue with running /tmp/setup as instructed, and then run:
+Now, continue with running /tmp/setup as instructed, and then run "nodemon app.js":
 
+    # /tmp/setup 
+    Running in the conatiner as root
+    Adding group `ksylvan' (GID 1000) ...
+    Done.
+    [...]
+    
     $ nodemon app.js
 
 Now, on your host, you can use your editor of choice (e.g. https://atom.io/) and change the sources,
