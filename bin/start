@@ -13,7 +13,7 @@ cd $there/..
 TOP=$(pwd)
 
 # base name of docker-compose services
-N=$(basename $(pwd) | sed 's/_//g')
+N=$(basename $(pwd) | sed 's/_//g' | tr '[:upper:]' '[:lower:]')
 
 DB_RUNNING=$(docker ps | grep ${N}_db)
 if [ -z "$DB_RUNNING" ]; then
