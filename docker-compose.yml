@@ -1,0 +1,19 @@
+data:
+  build: ./data
+  volumes:
+    - /data
+
+db:
+  image: redis
+  ports:
+    - "6379:6379"
+  volumes_from:
+    - data
+
+web:
+  build: ./app
+  command: npm start
+  ports:
+    - "1337:1337"
+  links:
+    - db
