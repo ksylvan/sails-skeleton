@@ -34,5 +34,7 @@ if [ -z "$WEB_IMAGE" ]; then
   exit 2
 fi
 
+# 1337 is the normal sails port, 8080 and 5858 for node-inspector connection
+PORTS="-p 1337:1337 -p 8080:8080 -p 5858:5858"
 cd app
-env IMAGE=${N}_web ../bin/workflow --link $DB_CONTAINER_NAME:db -p 1337:1337
+env IMAGE=${N}_web ../bin/workflow --link $DB_CONTAINER_NAME:db $PORTS ${1+"$@"}
