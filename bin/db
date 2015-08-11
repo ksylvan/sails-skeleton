@@ -1,0 +1,76 @@
+#!/bin/sh
+#
+# ./bin/db to save/restore data in DB container
+#
+# Usage: ./bin/db save|restore [filename]
+
+here=$(pwd)
+me=$(basename $0)
+cd $(dirname $0); there=$(pwd); cd $here
+
+cd $there/..
+TOP=$(pwd)
+
+# base name of docker-compose services
+N=$(basename $(pwd) | sed 's/_//g' | tr '[:upper:]' '[:lower:]')
+
+container_volumes()
+{
+  docker inspect --format '{{range $v, $h := .Volumes}}{{$v}}{{end}}' $1
+}
+
+usage()
+{
+  echo "Usage: $me help                   prints this help message."
+  echo "       $me save [filename]        save data to tmp/filename"
+  echo "       $me restore [filename]     restore from tmp/filename"
+  echo "If filename is not specified, defaults to data.tar.gz"
+  exit 0
+}
+
+DB_DATA=$(docker ps -a | grep ${N}_data)
+if [ -z "$DB_DATA" ]; then
+  echo "ERROR: Data container should exist. Have you created it?"
+  echo "Do this first, then try again:"
+  echo "    cd $TOP"
+  echo "    ./bin/docker-compose up data"
+  echo "    ./bin/docker-compose up db"
+  echo "Once you have data to save/restore, re-run this script."
+  exit 1
+fi
+DATA_CONTAINER_NAME=$(echo $DB_DATA | awk '{print $1}')
+
+DB_RUNNING=$(docker ps | grep ${N}_db)
+if [ -n "$DB_RUNNING" ]; then
+  echo "ERROR: Database container is running. Please stop it first."
+  echo "Run these commands:"
+  echo "    cd $TOP"
+  echo "    ./bin/docker-compose stop db"
+  echo "Then re-run this script."
+  exit 2
+fi
+FNAME=data.tar.gz
+if [ -n "$2" ]; then FNAME="$2"; fi
+
+DIRS_TO_SAVE="$(container_volumes $DATA_CONTAINER_NAME)"
+
+if [ "$1" = 'save' ]; then
+  mkdir -p tmp
+  docker run --rm --volumes-from $DATA_CONTAINER_NAME -v $TOP/tmp:/backup \
+    busybox tar cvf /backup/$$.tar $DIRS_TO_SAVE
+  gzip -9 tmp/$$.tar; mv tmp/$$.tar.gz tmp/$FNAME
+  echo "Data container volumes backed up to tmp/$FNAME"
+elif [ "$1" = 'restore' ]; then
+  if [ ! -r tmp/$FNAME ]; then
+    echo "ERROR: No file tmp/$FNAME exists in $TOP"
+    exit 3
+  fi
+  echo "gunzip < /tmp/b.tgz | tar xvf -" > tmp/sh$$
+  docker run --rm --volumes-from $DATA_CONTAINER_NAME \
+    -v $TOP/tmp/sh$$:/tmp/doit -v $TOP/tmp/$FNAME:/tmp/b.tgz \
+    busybox sh /tmp/doit
+  rm -f tmp/sh$$
+  echo "Data container volumes restored from tmp/$FNAME"
+else
+  usage
+fi
