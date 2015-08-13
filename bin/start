@@ -15,26 +15,44 @@ TOP=$(pwd)
 # base name of docker-compose services
 N=$(basename $(pwd) | sed 's/_//g' | tr '[:upper:]' '[:lower:]')
 
-DB_RUNNING=$(docker ps | grep ${N}_db)
-if [ -z "$DB_RUNNING" ]; then
-  echo "DB container should be running."
-  echo "Do this first, then try again:"
-  echo "    cd $TOP"
-  echo "    ./bin/docker-compose start db"
-  exit 1
-fi
-DB_CONTAINER_NAME=$(echo $DB_RUNNING | awk '{print $1}')
+image_name()
+{
+  echo "${N}_${1}"
+}
 
-WEB_IMAGE=$(docker images | grep ${N}_web)
+WEB_SERVICE="web" # docker-compose name
+RELATED_SERVICES=$(ruby -e 'require "yaml";\
+  x = YAML.load_file("docker-compose.yml");\
+  puts x["web"]["links"];')
+
+LINKS=""
+for s in $RELATED_SERVICES
+do
+  UP=$(./bin/docker-compose ps $s | grep Up)
+  if [ -z "$UP" ]; then # we must bring up the service
+    ./bin/docker-compose up -d $s
+  fi
+  UP=$(./bin/docker-compose ps $s | grep Up)
+  if [ -z "$UP" ]; then
+    echo "ERROR: Something is wrong. Can not bring up $s service."
+    exit 1
+  fi
+  s_name=$(echo $UP | awk '{print $1}')
+  LINKS="$LINKS --link $s_name:$s"
+done
+
+WEB_IMAGE=$(docker images | grep `image_name $WEB_SERVICE`)
 if [ -z "$WEB_IMAGE" ]; then
-  echo "Web container is missing."
-  echo "Do this first, then try again:"
-  echo "    cd $TOP"
-  echo "    ./bin/docker-compose build web"
-  exit 2
+  echo "Web container is missing. Trying to build it."
+  ./bin/docker-compose build $WEB_SERVICE
+  WEB_IMAGE=$(docker images | grep `image_name $WEB_SERVICE`)
+  if [ -z "$WEB_IMAGE" ]; then
+    echo "ERROR: Could not build $WEB_SERVICE service."
+    exit 2
+  fi
 fi
 
 # 1337 is the normal sails port, 8080 and 5858 for node-inspector connection
 PORTS="-p 1337:1337 -p 8080:8080 -p 5858:5858"
 cd app
-env IMAGE=${N}_web ../bin/workflow --link $DB_CONTAINER_NAME:db $PORTS ${1+"$@"}
+env IMAGE=$(image_name $WEB_SERVICE) ../bin/workflow $LINKS $PORTS ${1+"$@"}

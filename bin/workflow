@@ -29,7 +29,7 @@ then
   echo "Using args: $ARGS"
   echo "Current directory becomes /usr/src/app"
   echo ""
-  echo "On Linux, continue by /tmp/setup in the container."
+  echo "On Linux, continue by executing /tmp/setup in the container."
   echo "This will preserve file ownership."
   echo ""
   echo "Then continue using commands in the container."
@@ -40,7 +40,7 @@ then
   rm -rf .tmp$$
 elif [ "$me" = "setup" ]
 then
-  echo "Running in the conatiner as root"
+  echo "Running in the container as root"
   read user_name user_id group_name group_id < /tmp/ids
   if grep -q $user_name /etc/passwd
   then
@@ -53,7 +53,7 @@ then
   fi
   cd /usr/src/app
   echo ""
-  echo "Once the shell starts up, continue doing work in the conatiner"
+  echo "Once the shell starts up, continue doing work in the container"
   echo ""
   su $user_name
 fi
