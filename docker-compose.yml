@@ -10,6 +10,9 @@ db:
   volumes_from:
     - data
 
+# Keep this as the last service so that the ./bin/start script
+# can parse the other services that it links to.
+#
 web:
   build: ./app
   command: npm start

@@ -21,9 +21,8 @@ image_name()
 }
 
 WEB_SERVICE="web" # docker-compose name
-RELATED_SERVICES=$(ruby -e 'require "yaml";\
-  x = YAML.load_file("docker-compose.yml");\
-  puts x["web"]["links"];')
+RELATED_SERVICES=$(grep -A 999 web: docker-compose.yml | \
+  grep -A 999 links: | grep -v links: | sed 's/-//')
 
 LINKS=""
 for s in $RELATED_SERVICES
