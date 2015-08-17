@@ -14,9 +14,13 @@ TOP=$(pwd)
 # base name of docker-compose services
 N=$(basename $(pwd) | sed 's/_//g' | tr '[:upper:]' '[:lower:]')
 
-container_volumes()
+data_volumes()
 {
-  docker inspect --format '{{range $v, $h := .Volumes}}{{$v}}{{end}}' $1
+  L=`echo $(grep -n '^[^ :]*:$' docker-compose.yml | grep -A 1 data)`
+  LINES_AFTER_DATA=$(echo $L | awk -F: '{print $3 - $1 - 1}')
+  V=$(grep -A $LINES_AFTER_DATA data: docker-compose.yml | \
+      grep -A 999 volumes: | grep -v volumes: | sed 's/-//')
+  echo $V
 }
 
 usage()
@@ -52,7 +56,7 @@ fi
 FNAME=data.tar.gz
 if [ -n "$2" ]; then FNAME="$2"; fi
 
-DIRS_TO_SAVE="$(container_volumes $DATA_CONTAINER_NAME)"
+DIRS_TO_SAVE="$(data_volumes)"
 
 if [ "$1" = 'save' ]; then
   mkdir -p tmp
